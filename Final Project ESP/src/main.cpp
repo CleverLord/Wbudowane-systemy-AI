@@ -1,11 +1,6 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 //Force those to be build before ota.h
-#include <FS.h>
-#include <WiFi.h>
-#include <WebServer.h>
-#include <Update.h>
-#include <AsyncTCP.h>
-#include <ElegantOTA.h>
 
 #define LED_BUILTIN 33
 #define LED_FLASH 4
@@ -16,43 +11,39 @@
 const char* ssid = "IoT-AP";
 const char* password = "12345678";
 
-WebServer server(80);
 
 
 #pragma region OTA
-void onOTAStart() {
-  // Log when OTA has started
-  Serial.println("OTA update started!");
-  // <Add your own code here>
-}
-unsigned long ota_progress_millis = 0;
-void onOTAProgress(size_t current, size_t final) {
-  // Log every 1 second
-  if (millis() - ota_progress_millis > 1000) {
-    ota_progress_millis = millis();
-    Serial.printf("OTA Progress Current: %u bytes, Final: %u bytes\n", current, final);
-  }
-}
+void setupOta(){
+ArduinoOTA.setHostname("myesp32");
+ArduinoOTA.setPassword("admin");
+  ArduinoOTA
+    .onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
 
-void onOTAEnd(bool success) {
-  // Log when OTA has finished
-  if (success) {
-    Serial.println("OTA update finished successfully!");
-  } else {
-    Serial.println("There was an error during OTA update!");
-  }
-  // <Add your own code here>
-}
-void setupOta(void) {
-  server.on("/", []() {
-    server.send(200, "text/plain", "Hi! This is ElegantOTA Demo.");
-  });
-  ElegantOTA.begin(&server);
-  ElegantOTA.onStart(onOTAStart);
-  ElegantOTA.onProgress(onOTAProgress);
-  ElegantOTA.onEnd(onOTAEnd);
-  server.begin();
-  Serial.println("HTTP server started");
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+    })
+    .onEnd([]() {
+      Serial.println("\nEnd");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+
+  ArduinoOTA.begin();
 }
 #pragma endregion ota
 
@@ -87,13 +78,13 @@ void setLED(int pin, int state) {
 }
 
 void utlityLoop() {
-  server.handleClient();
-  ElegantOTA.loop();
+  ArduinoOTA.handle();
 }
 
 void myLoop(){
   setLED(LED_BUILTIN, millis() % 1500 < 500);
   setLED(LED_FLASH, millis() % 1500 < 1000);
+  Serial.println("Loop: " + String(millis()));
 }
 
 void loop() {
