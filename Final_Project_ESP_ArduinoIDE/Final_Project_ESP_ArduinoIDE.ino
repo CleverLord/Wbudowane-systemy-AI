@@ -1,46 +1,28 @@
-#include <Arduino.h>
-//Force those to be build before ota.h
-#include <FS.h>
 #include <WiFi.h>
-#include <WebServer.h>
-#include <Update.h>
 #include <AsyncTCP.h>
-#include <ElegantOTA.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
+#include <esp_task_wdt.h>
+#define WDT_TIMEOUT 3
 
-#define LED_BUILTIN 33
-#define LED_FLASH 4
+#define RED_LED 33
+#define FLASH_LED 4
 
-// put function declarations here:
-// int myFunction(int, int);
+//Functions Declarations
+void Init();
+void LateInit();
 
-const char* ssid = "IoT-AP";
-const char* password = "12345678";
+String GetWifiMode();
+String GetWifiStatus();
 
-WebServer server(80);
+// WifiManager;
+void ConnectWiFi(String ssid, String pass);
+void CreateAP();
 
-void setup() {
-  Serial.begin(115200);
-  pinMode(0, INPUT);
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(LED_FLASH, OUTPUT);
-  connectWifi();
-  setupOta();
+void setup(void) {
+  Serial.begin(115200); //TEMP
+  CoreSetup();
 }
-
-void setLED(int pin, int state) {
-  if (pin == LED_BUILTIN) {
-    digitalWrite(LED_FLASH, state);
-  } else if (pin == LED_FLASH) {
-    digitalWrite(LED_BUILTIN, !state);
-  }
-}
-
-void myLoop(){
-  setLED(LED_BUILTIN, millis() % 1000 < 500);
-  setLED(LED_FLASH, millis() % 1000 < 900);
-}
-
 void loop() {
-  myLoop();
-  otaLoop();
+  CoreLoop();
 }
