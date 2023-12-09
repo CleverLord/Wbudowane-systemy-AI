@@ -11,7 +11,7 @@
 // uint16_t tmp;
 uint16_t *dstImage; //[DST_WIDTH * DST_HEIGHT];   // Destination gray level image data
 void downsampleImage(uint16_t *srcImage, uint16_t SRC_WIDTH, uint16_t SRC_HEIGHT);
-void upsample(uint16_t *srcImage);
+// void upsample(uint16_t *srcImage);
 void averageResampleImage(uint16_t *srcImage, uint16_t SRC_WIDTH, uint16_t SRC_HEIGHT);
 
 void downsampleImage(uint16_t *srcImage, uint16_t SRC_WIDTH, uint16_t SRC_HEIGHT) {

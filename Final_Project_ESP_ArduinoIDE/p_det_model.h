@@ -21,8 +21,8 @@ limitations under the License.
 #ifndef TENSORFLOW_LITE_MICRO_EXAMPLES_PERSON_DETECTION_PERSON_DETECT_MODEL_DATA_H_
 #define TENSORFLOW_LITE_MICRO_EXAMPLES_PERSON_DETECTION_PERSON_DETECT_MODEL_DATA_H_
 
-extern const unsigned char ASL_1_lite_tflite[];
+extern const unsigned char ASL_256_lite_tflite[];
 // extern const int g_person_detect_model_data_len;
-extern const int ASL_1_lite_tflite_len;
+extern const int ASL_256_lite_tflite_len;
 
 #endif  // TENSORFLOW_LITE_MICRO_EXAMPLES_PERSON_DETECTION_PERSON_DETECT_MODEL_DATA_H_

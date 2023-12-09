@@ -9,12 +9,13 @@ void Init() {
   if (!ProcessBootAttempts()) return;
 
   //PrewarmFpsProcessor(); //todo - measure lags
-  esp_task_wdt_init(WDT_TIMEOUT, true);  //włączenie obsługi watchdog ESP32
+  esp_task_wdt_init(7, true);  //włączenie obsługi watchdog ESP32
   esp_task_wdt_add(NULL);                //dodanie bieżącego wątku do "pilnowania" przez WDT
 
   initSuccess = true;
   Log("Device running!");
 }
+
 void LateInit() {
   if (bootFileDeleted) return;
   if (millis() > 10000) {
@@ -35,9 +36,8 @@ void InitGpio() {
 void InitOtaAndHttp() {
   SetupSafeHttpEndpoints();
   AsyncElegantOTA.begin(&server);  //Start ElegantOTA
-  Log("server.begin(); ");
   server.begin();  //Second error here                //this only launches socket for connections. Further functions can be added
-  Log("started, server.begin();");
+  Log("server.begin(); ");
 }
 
 void InitWifi() {

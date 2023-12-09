@@ -23,7 +23,6 @@
 #include "soc/soc.h" // Disable brownout problems
 #include "soc/rtc_cntl_reg.h" // Disable brownout problems
 
-
 #include "tst_img.h"
 
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
@@ -68,7 +67,7 @@ static uint8_t *tensor_arena;//[kTensorArenaSize]; // Maybe we should move this 
 
 
 void init_camera(){
-  if(VERBOSE) Serial.println("Initializing Camera");
+  if(VERBOSE) Log("Initializing Camera");
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -103,7 +102,7 @@ void init_camera(){
     delay(1000);
     ESP.restart();
   }
-  if(VERBOSE) Serial.println("Camera Initialized");
+  if(VERBOSE) Log("Camera Initialized");
 }
 
 
@@ -113,17 +112,17 @@ void AppSetup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);//disable brownout detector
 
   Serial.begin(115200);
-  if(VERBOSE) Serial.println("Hello World");
+  if(VERBOSE) Log("Hello World");
   init_camera();
   
-  dstImage = (uint16_t *) malloc(DST_WIDTH * DST_HEIGHT*2);
-  if(VERBOSE) Serial.println("dstImage allocated");
+  dstImage = (uint8_t *) malloc(DST_WIDTH * DST_HEIGHT);
+  if(VERBOSE) Log("dstImage allocated");
   delay(200);
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
-  if(VERBOSE) Serial.println("error_reporter initialized");
+  if(VERBOSE) Log("error_reporter initialized");
 
-  model = tflite::GetModel(ASL_1_lite_tflite);
+  model = tflite::GetModel(ASL_256_lite_tflite);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Model provided is schema version %d not equal "
@@ -131,11 +130,11 @@ void AppSetup() {
                          model->version(), TFLITE_SCHEMA_VERSION);
     return;
   }
-  Serial.println("model loaded");
+  Log("model loaded");
   if (tensor_arena == NULL) {
     tensor_arena =  (uint8_t *) heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
   }
-  Serial.println("tensor_arena allocated");
+  Log("tensor_arena allocated");
   if (tensor_arena == NULL) {
     printf("Couldn't allocate memory of %d bytes\n", kTensorArenaSize);
     return;
@@ -156,11 +155,11 @@ void AppSetup() {
       */
   // NOLINTNEXTLINE(runtime-global-variables)
   //
-  if(VERBOSE) Serial.println("micro_op_resolver initializing");
+  if(VERBOSE) Log("micro_op_resolver initializing");
   static tflite::MicroMutableOpResolver<9> micro_op_resolver;
-  //micro_op_resolver.AddAveragePool2D();
+  micro_op_resolver.AddAveragePool2D();
   micro_op_resolver.AddMaxPool2D();
-  //micro_op_resolver.AddReshape();
+  micro_op_resolver.AddReshape();
   micro_op_resolver.AddFullyConnected();
   micro_op_resolver.AddConv2D();
   micro_op_resolver.AddDepthwiseConv2D();
@@ -168,21 +167,15 @@ void AppSetup() {
   micro_op_resolver.AddSoftmax();
   micro_op_resolver.AddQuantize();
   micro_op_resolver.AddDequantize();
-  if(VERBOSE) Serial.println("micro_op_resolver initialized");
+  if(VERBOSE) Log("micro_op_resolver initialized");
   
-  
-
-  // Build an interpreter to run the model with.
-  // NOLINTNEXTLINE(runtime-global-variables)
-  if(VERBOSE) Serial.println("static_interpreter initializing");
+  if(VERBOSE) Log("static_interpreter initializing");
   static tflite::MicroInterpreter static_interpreter(
       model, micro_op_resolver, tensor_arena, kTensorArenaSize, error_reporter);
   
-      ////
-  
-  if(VERBOSE) Serial.println("static_interpreter initialized");
+  if(VERBOSE) Log("static_interpreter initialized");
   interpreter = &static_interpreter;
-  if(VERBOSE) Serial.println("interpreter initialized");
+  if(VERBOSE) Log("interpreter initialized");
 
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
@@ -190,21 +183,22 @@ void AppSetup() {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
-  if(VERBOSE) Serial.println("tensors allocated");
+  if(VERBOSE) Log("tensors allocated");
 
   // Get information about the memory area to use for the model's input.
   input = interpreter->input(0);
   pinMode(4, OUTPUT);
-  if(VERBOSE) Serial.println("input initialized");
+  if(VERBOSE) Log("input initialized");
 }
 
 void AppLoop() {
   // put your main code here, to run repeatedly:
-  if(VERBOSE) Serial.println("loop");
+  if(VERBOSE) Log("loop");
   for (int i = 0; i<1; i++){
   fb = esp_camera_fb_get();
     if (!fb) {
-      Serial.println("Camera capture failed");
+      Log("Camera capture failed");
+      return;
     }
     if(fb){
       esp_camera_fb_return(fb);
@@ -212,102 +206,104 @@ void AppLoop() {
     }
   delay(1);
   }
-  if(VERBOSE) Serial.println("camera capture");
+  if(VERBOSE) Log("camera capture");
 
   fb = esp_camera_fb_get();
-    if (!fb) {
-      Serial.println("Camera capture failed");
+  if (!fb) {
+    Log("Camera capture failed");
+  }
+  uint8_t * tmp = (uint8_t *) fb->buf;
+  if(VERBOSE) Log("downsampling");
+  downsampleImage((uint8_t *) fb->buf, fb->width, fb->height);
+  if(VERBOSE) Log("downsampled");
+
+  for (int y = 0; y < DST_HEIGHT; y++) {
+    for (int x = 0; x < DST_WIDTH; x++) {
+      tmp[y*(fb->width) + x] = (uint8_t) dstImage[y*DST_WIDTH +x];
     }
-  uint16_t * tmp = (uint16_t *) fb->buf;
-    if(VERBOSE) Serial.println("downsampling");
-    downsampleImage((uint16_t *) fb->buf, fb->width, fb->height);
-    if(VERBOSE) Serial.println("downsampled");
+  }
+  // if(VERBOSE) Log("upsampling");
+  // upsample((uint16_t *) fb->buf);
+  // if(VERBOSE) Log("upsampled");
 
-    for (int y = 0; y < DST_HEIGHT; y++) {
-      for (int x = 0; x < DST_WIDTH; x++) {
-        tmp[y*(fb->width) + x] = (uint16_t) dstImage[y*DST_WIDTH +x];
-      }
+  if(fb){
+    esp_camera_fb_return(fb);
+    fb = NULL;
+    if(VERBOSE) Log("fb returned");
+  }
+
+  //digitalWrite(4, LOW);
+  if(VERBOSE) Log("invoking");
+  int8_t * image_data = input->data.uint8;
+
+  for (int i = 0; i < kNumRows; i++) {
+    for (int j = 0; j < kNumCols; j++) {
+      uint16_t pixel = ((uint16_t *) (dstImage))[i * kNumCols + j];
+
+      // for inference
+      uint8_t hb = pixel & 0xFF;
+      uint8_t lb = pixel >> 8;
+      uint8_t r = (lb & 0x1F) << 3;
+      uint8_t g = ((hb & 0x07) << 5) | ((lb & 0xE0) >> 3);
+      uint8_t b = (hb & 0xF8);
+
+      /**
+      * Gamma corected rgb to greyscale formula: Y = 0.299R + 0.587G + 0.114B
+      * for effiency we use some tricks on this + quantize to [-128, 127]
+      */
+      // int8_t grey_pixel = ((305 * r + 600 * g + 119 * b) >> 10) - 128;
+
+      int8_t grey_pixel = (int8_t) tst_img1[i * kNumCols + j]
+
+      image_data[i * kNumCols + j] = grey_pixel;
+
+      // float grey_pixel = (float) ((305 * r + 600 * g + 119 * b) >> 10);// - 128;
+      // grey_pixel=grey_pixel/255.0;
+
+      // image_data[i * kNumCols + j] = grey_pixel;
     }
-    if(VERBOSE) Serial.println("upsampling");
-    // upsample((uint16_t *) fb->buf);
-    delay(15);
-    if(VERBOSE) Serial.println("upsampled");
-
-    if(fb){
-      esp_camera_fb_return(fb);
-      fb = NULL;
-    }
-    if(VERBOSE) Serial.println("fb returned");
-    delay(15);
-  
-    //digitalWrite(4, LOW);
-    if(VERBOSE) Serial.println("invoking");
-    int8_t * image_data = input->data.int8;
-
-    for (int i = 0; i < kNumRows; i++) {
-      for (int j = 0; j < kNumCols; j++) {
-        uint16_t pixel = ((uint16_t *) (dstImage))[i * kNumCols + j];
-
-        // for inference
-        uint8_t hb = pixel & 0xFF;
-        uint8_t lb = pixel >> 8;
-        uint8_t r = (lb & 0x1F) << 3;
-        uint8_t g = ((hb & 0x07) << 5) | ((lb & 0xE0) >> 3);
-        uint8_t b = (hb & 0xF8);
-
-        /**
-        * Gamma corected rgb to greyscale formula: Y = 0.299R + 0.587G + 0.114B
-        * for effiency we use some tricks on this + quantize to [-128, 127]
-        */
-        int8_t grey_pixel = ((305 * r + 600 * g + 119 * b) >> 10) - 128;
-
-        // int8_t grey_pixel = (int8_t) ((int) tst_img1[i * kNumCols + j]-128);
-
-        image_data[i * kNumCols + j] = grey_pixel;
-
-        // float grey_pixel = (float) ((305 * r + 600 * g + 119 * b) >> 10);// - 128;
-        // grey_pixel=grey_pixel/255.0;
-
-        // image_data[i * kNumCols + j] = grey_pixel;
-      }
-    }
-    if(VERBOSE) Serial.println("image_data set");
+  }
+  if(VERBOSE) Log("image_data set");
   if (kTfLiteOk != interpreter->Invoke()) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed.");
   }
-  if(VERBOSE) Serial.println("invoked");
+  if(VERBOSE) Log("invoked");
   TfLiteTensor* output = interpreter->output(0);
-  if(VERBOSE) Serial.println("output set");
+  if(VERBOSE) Log("output set");
 
   // Process the inference results.
   // int8_t max_confidence = -127;
-  int idx = 0;
-  int idx2 = 0;
-  uint8_t max_confidence = output->data.uint8[idx];
-  uint8_t cur_confidence = 0;
-  float max_tmp = -10000.0;
-  for(int i = 0; i < kCategoryCount; i++){
-    float tmp=output->data.f[i];
-    // Serial.println(String(tmp));
-    
-    cur_confidence = output->data.uint8[i];
-    
-    if(max_confidence < cur_confidence){
-      idx2=idx;
-      idx = i;
-      max_confidence = cur_confidence;
-    }
-    if (tmp > max_tmp){
-      // idx = i;
-      max_tmp = tmp;
+  int confidenceIndexes[kCategoryCount];
+  int8_t confidenceValues[kCategoryCount];
+
+  for (int i = 0; i < kCategoryCount; i++) {
+    confidenceIndexes[i] = i;
+    confidenceValues[i] = output->data.uint8[i];
+  }
+
+  // Sort the index-value pairs based on values in descending order (using the "bubble sort" algorithm)
+  for (int i = 0; i < kCategoryCount - 1; i++) {
+    for (int j = 0; j < kCategoryCount - i - 1; j++) {
+      if (confidenceValues[j] < confidenceValues[j + 1]) {
+        // Swap index-value pairs
+        float tempValue = confidenceValues[j];
+        confidenceValues[j] = confidenceValues[j + 1];
+        confidenceValues[j + 1] = tempValue;
+
+        int tempIndex = confidenceIndexes[j];
+        confidenceIndexes[j] = confidenceIndexes[j + 1];
+        confidenceIndexes[j + 1] = tempIndex;
+      }
     }
   }
-  Serial.println("Letter: ");
-  Serial.print(kCategoryLabels[idx]);
-  Serial.print(" Confidence: ");
-  Serial.println(max_confidence);
-  //delay(2000);
-  Serial.println("displaying");
-  delay(10);
+
+  // Print the data in the desired format
+  for (int i = 0; i < kCategoryCount; i++) {
+    if (i > 0) Serial.print("\t"); // Add a tab separator between label:value pairs (except for the first one)
+    Serial.print(kCategoryLabels[i]);
+    Serial.print(":");
+    Serial.print(confidenceValues[i]);
+  }
+  Serial.println(); // Print a newline character at the end
 
 }

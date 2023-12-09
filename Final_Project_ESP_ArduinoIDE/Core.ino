@@ -18,7 +18,7 @@ void CoreLoop() {
     return;
   }
 
-  if (isInSafeMode) {
+  if (!initSuccess) {
     //Casual bad - Devs' code problem
     //Safe mode ( Access Point + Ota enabled only )
     OtaErrorHandlerLoop();
@@ -28,4 +28,5 @@ void CoreLoop() {
   //regular code
   LateInit();
   AppLoop();
+  ProcessFps();
 }

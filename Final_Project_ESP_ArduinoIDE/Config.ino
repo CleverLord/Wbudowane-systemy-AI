@@ -8,7 +8,6 @@
 #define DEVICE_NAME_FILE "/deviceName.txt"
 
 bool initSuccess = false;
-bool isInSafeMode = false;
 
 AsyncWebServer server(80);
 bool spiffsInitialized = false;
