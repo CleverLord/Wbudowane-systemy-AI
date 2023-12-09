@@ -9,7 +9,6 @@
 // #include "Arduino.h"
 
 // uint16_t tmp;
-uint16_t *img192x192;
 uint16_t *dstImage; //[DST_WIDTH * DST_HEIGHT];   // Destination gray level image data
 void downsampleImage(uint16_t *srcImage, uint16_t SRC_WIDTH, uint16_t SRC_HEIGHT);
 void upsample(uint16_t *srcImage);
@@ -55,20 +54,18 @@ void downsampleImage2(uint16_t *srcImage, uint16_t SRC_WIDTH, uint16_t SRC_HEIGH
   }
 }
 
-void upsample(uint16_t *srcImage) {
-  
-  
-  for (int y = 0; y < 96; y++) {
-    for (int x = 0; x < 96; x++) {
-      uint16_t pixel = ((uint16_t *) srcImage)[y*96+x];
-      img192x192[2*y*96*2+2*x] = pixel;
-        img192x192[2*y*96*2+2*x+1] = pixel;
-        img192x192[(2*y+1)*96*2+2*x] = pixel;
-        img192x192[(2*y+1)*96*2+2*x+1] = pixel;
-      
-    }
-  }
-}
+// void upsample(uint16_t *srcImage) {
+
+//   for (int y = 0; y < 96; y++) {
+//     for (int x = 0; x < 96; x++) {
+//       uint16_t pixel = ((uint16_t *) srcImage)[y*96+x];
+//       img192x192[2*y*96*2+2*x] = pixel;
+//         img192x192[2*y*96*2+2*x+1] = pixel;
+//         img192x192[(2*y+1)*96*2+2*x] = pixel;
+//         img192x192[(2*y+1)*96*2+2*x+1] = pixel;
+//     }
+//   }
+// }
 
 void averageResampleImage(uint16_t *srcImage, uint16_t SRC_WIDTH, uint16_t SRC_HEIGHT) {
   float scaleX = (float)SRC_WIDTH / DST_WIDTH;    // Calculate the X scaling factor

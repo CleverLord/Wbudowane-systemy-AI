@@ -27,7 +27,7 @@
 #include "tst_img.h"
 
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
-
+#define VERBOSE false
 
 #include "camera_pins.h"
 #include "downsample.h"
@@ -43,10 +43,6 @@ const char* kCategoryLabels[kCategoryCount] = {
 
 
 camera_fb_t * fb = NULL;
-
-size_t _jpg_buf_len = 0;
-uint8_t * _jpg_buf = NULL;
-
 
 //tflite stuff
 tflite::ErrorReporter* error_reporter = nullptr;
@@ -72,6 +68,7 @@ static uint8_t *tensor_arena;//[kTensorArenaSize]; // Maybe we should move this 
 
 
 void init_camera(){
+  if(VERBOSE) Serial.println("Initializing Camera");
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -106,6 +103,7 @@ void init_camera(){
     delay(1000);
     ESP.restart();
   }
+  if(VERBOSE) Serial.println("Camera Initialized");
 }
 
 
@@ -115,12 +113,15 @@ void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);//disable brownout detector
 
   Serial.begin(115200);
+  if(VERBOSE) Serial.println("Hello World");
   init_camera();
   
   dstImage = (uint16_t *) malloc(DST_WIDTH * DST_HEIGHT*2);
+  if(VERBOSE) Serial.println("dstImage allocated");
   delay(200);
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
+  if(VERBOSE) Serial.println("error_reporter initialized");
 
   model = tflite::GetModel(ASL_1_lite_tflite);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
@@ -130,9 +131,11 @@ void setup() {
                          model->version(), TFLITE_SCHEMA_VERSION);
     return;
   }
+  Serial.println("model loaded");
   if (tensor_arena == NULL) {
     tensor_arena =  (uint8_t *) heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
   }
+  Serial.println("tensor_arena allocated");
   if (tensor_arena == NULL) {
     printf("Couldn't allocate memory of %d bytes\n", kTensorArenaSize);
     return;
@@ -153,11 +156,11 @@ void setup() {
       */
   // NOLINTNEXTLINE(runtime-global-variables)
   //
-  
+  if(VERBOSE) Serial.println("micro_op_resolver initializing");
   static tflite::MicroMutableOpResolver<9> micro_op_resolver;
-  micro_op_resolver.AddAveragePool2D();
+  //micro_op_resolver.AddAveragePool2D();
   micro_op_resolver.AddMaxPool2D();
-  micro_op_resolver.AddReshape();
+  //micro_op_resolver.AddReshape();
   micro_op_resolver.AddFullyConnected();
   micro_op_resolver.AddConv2D();
   micro_op_resolver.AddDepthwiseConv2D();
@@ -165,18 +168,21 @@ void setup() {
   micro_op_resolver.AddSoftmax();
   micro_op_resolver.AddQuantize();
   micro_op_resolver.AddDequantize();
-  
+  if(VERBOSE) Serial.println("micro_op_resolver initialized");
   
   
 
   // Build an interpreter to run the model with.
   // NOLINTNEXTLINE(runtime-global-variables)
+  if(VERBOSE) Serial.println("static_interpreter initializing");
   static tflite::MicroInterpreter static_interpreter(
       model, micro_op_resolver, tensor_arena, kTensorArenaSize, error_reporter);
   
       ////
   
+  if(VERBOSE) Serial.println("static_interpreter initialized");
   interpreter = &static_interpreter;
+  if(VERBOSE) Serial.println("interpreter initialized");
 
   // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
@@ -184,16 +190,17 @@ void setup() {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed");
     return;
   }
+  if(VERBOSE) Serial.println("tensors allocated");
 
   // Get information about the memory area to use for the model's input.
   input = interpreter->input(0);
   pinMode(4, OUTPUT);
-
-
+  if(VERBOSE) Serial.println("input initialized");
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  if(VERBOSE) Serial.println("loop");
   for (int i = 0; i<1; i++){
   fb = esp_camera_fb_get();
     if (!fb) {
@@ -205,35 +212,36 @@ void loop() {
     }
   delay(1);
   }
+  if(VERBOSE) Serial.println("camera capture");
 
   fb = esp_camera_fb_get();
     if (!fb) {
       Serial.println("Camera capture failed");
     }
   uint16_t * tmp = (uint16_t *) fb->buf;
-
+    if(VERBOSE) Serial.println("downsampling");
     downsampleImage((uint16_t *) fb->buf, fb->width, fb->height);
+    if(VERBOSE) Serial.println("downsampled");
 
     for (int y = 0; y < DST_HEIGHT; y++) {
       for (int x = 0; x < DST_WIDTH; x++) {
         tmp[y*(fb->width) + x] = (uint16_t) dstImage[y*DST_WIDTH +x];
-
       }
     }
-    
-    upsample((uint16_t *) fb->buf);
+    if(VERBOSE) Serial.println("upsampling");
+    // upsample((uint16_t *) fb->buf);
     delay(15);
+    if(VERBOSE) Serial.println("upsampled");
 
     if(fb){
       esp_camera_fb_return(fb);
-      if(_jpg_buf){
-      free(_jpg_buf);}
       fb = NULL;
-      _jpg_buf = NULL;
     }
+    if(VERBOSE) Serial.println("fb returned");
     delay(15);
   
     //digitalWrite(4, LOW);
+    if(VERBOSE) Serial.println("invoking");
     int8_t * image_data = input->data.int8;
 
     for (int i = 0; i < kNumRows; i++) {
@@ -263,21 +271,20 @@ void loop() {
         // image_data[i * kNumCols + j] = grey_pixel;
       }
     }
-
+    if(VERBOSE) Serial.println("image_data set");
   if (kTfLiteOk != interpreter->Invoke()) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed.");
   }
-  
+  if(VERBOSE) Serial.println("invoked");
   TfLiteTensor* output = interpreter->output(0);
-  
+  if(VERBOSE) Serial.println("output set");
 
   // Process the inference results.
   // int8_t max_confidence = -127;
   int idx = 0;
-  int idx2 =0;
-  int8_t max_confidence = output->data.uint8[idx];
-  int8_t max_confidence2 = output->data.uint8[idx];
-  int8_t cur_confidence;
+  int idx2 = 0;
+  uint8_t max_confidence = output->data.uint8[idx];
+  uint8_t cur_confidence = 0;
   float max_tmp = -10000.0;
   for(int i = 0; i < kCategoryCount; i++){
     float tmp=output->data.f[i];
@@ -295,17 +302,12 @@ void loop() {
       max_tmp = tmp;
     }
   }
-  Serial.println(idx);
+  Serial.println("Letter: ");
+  Serial.print(kCategoryLabels[idx]);
+  Serial.print(" Confidence: ");
   Serial.println(max_confidence);
-
-  String detected= String(kCategoryLabels[idx]);
-  String detected2 = String(kCategoryLabels[idx2]);
-  
-    // esp_camera_fb_return(fb);
-    // fb = NULL;
-    // free(buffer);
-  delay(2000);
-  // tft.fillScreen(TFT_BLUE);
+  //delay(2000);
+  Serial.println("displaying");
   delay(10);
 
 }
