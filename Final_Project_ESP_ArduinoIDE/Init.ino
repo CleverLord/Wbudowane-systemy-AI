@@ -9,7 +9,7 @@ void Init() {
   if (!ProcessBootAttempts()) return;
 
   //PrewarmFpsProcessor(); //todo - measure lags
-  esp_task_wdt_init(7, true);  //włączenie obsługi watchdog ESP32
+  esp_task_wdt_init(WDT_TIMEOUT, true);  //włączenie obsługi watchdog ESP32
   esp_task_wdt_add(NULL);                //dodanie bieżącego wątku do "pilnowania" przez WDT
 
   initSuccess = true;

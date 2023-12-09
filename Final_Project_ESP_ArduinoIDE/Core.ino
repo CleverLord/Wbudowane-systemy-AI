@@ -1,5 +1,6 @@
 void CoreSetup() {
   Init();
+  Log(BUILD_TIME);
   if (!initSuccess)
     OtaErrorHandlerSetup();
   else
@@ -28,5 +29,6 @@ void CoreLoop() {
   //regular code
   LateInit();
   AppLoop();
-  ProcessFps();
+  UpdateTimeClient();
+  // ProcessFps();
 }
