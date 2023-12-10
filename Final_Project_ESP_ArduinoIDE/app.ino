@@ -277,7 +277,7 @@ void AppLoop() {
   
   TfLiteTensor* output = interpreter->output(0);
   TfLiteEvalTensor* output_eval_ptr = new TfLiteEvalTensor();// This is a fokn same as TfLiteTensor, just lighter, but it makes GetTensorData work
-  output_eval_ptr->data = output->data;
+    output_eval_ptr->data = output->data;
   output_eval_ptr->dims = output->dims;
   output_eval_ptr->type = output->type;
   TfLiteType type = output->type;
@@ -286,7 +286,7 @@ void AppLoop() {
   Log("output bytes = " + String(bytes));
   TfLiteIntArray* dims = output->dims;
   Log("output dims->size = " + String(dims->size));
-
+  
   uint8_t* outputData = tflite::micro::GetTensorData<uint8_t>(output_eval_ptr);
   Log("tflite::micro::GetTensorData<uint8_t>(output)");
   for (int i = 0; i < kCategoryCount; i++) {
