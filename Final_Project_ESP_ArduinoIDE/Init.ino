@@ -1,5 +1,6 @@
 void Init() {
   InitGpio();
+  HappyBlink();
   if (!InitSpiffs()) return;
   Log("Device Powered, Spiffs working");  //This is the first place we can use this function
   InitWifi();
@@ -14,6 +15,7 @@ void Init() {
 
   initSuccess = true;
   Log("Device running!");
+  HappierBlink();
 }
 
 void LateInit() {
@@ -32,6 +34,33 @@ void InitGpio() {
   digitalWrite(RED_LED, HIGH);  //Low=On
   digitalWrite(FLASH_LED, LOW);
 }
+
+void HappyBlink(){
+  int totalT=150;
+  int onT=20;
+  int repeats=2;
+  
+  for(int i=0;i<repeats;i++){
+    RedLedOn();
+    delay(onT);
+    RedLedOff();
+    delay(totalT-onT);
+  }
+}
+
+void HappierBlink(){
+  int totalT=100;
+  int onT=20;
+  int repeats=3;
+  
+  for(int i=0;i<repeats;i++){
+    RedLedOn();
+    delay(onT);
+    RedLedOff();
+    delay(totalT-onT);
+  }
+}
+
 
 void InitOtaAndHttp() {
   SetupSafeHttpEndpoints();

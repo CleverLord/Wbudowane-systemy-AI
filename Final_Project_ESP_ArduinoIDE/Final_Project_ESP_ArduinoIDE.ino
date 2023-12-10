@@ -18,6 +18,10 @@ void LateInit();
 
 String GetWifiMode();
 String GetWifiStatus();
+void RedLedOn();
+void RedLedOff();
+void FlashLedOn();
+void FlashLedOff();
 
 // WifiManager;
 void ConnectWiFi(String ssid, String pass);

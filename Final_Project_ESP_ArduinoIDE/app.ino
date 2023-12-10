@@ -12,7 +12,8 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/schema/schema_generated.h"
-
+// #include "tensorflow/lite/kernels/internal/tensor_ctypes.h" // for GetTensorData
+#include "tensorflow/lite/micro/kernels/kernel_util.h" // for GetTensorData
 #include <esp_heap_caps.h>
 
 #include "esp_camera.h"
@@ -41,12 +42,10 @@ unsigned long tm_to_disp;
 
 // #include <fb_gfx.h>
 const char* kCategoryLabels[kCategoryCount] = {
-    "A", "B", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M",
-                        "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y"
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "K",
+    "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U",
+    "V", "W", "X", "Y"
 };
-
-
-
 
 // #define TEXT "starting app..."
 
@@ -79,20 +78,6 @@ constexpr int scratchBufSize = 0;
 constexpr int kTensorArenaSize = 81 * 1024 + scratchBufSize; //81 * 1024 + scratchBufSize;
 static uint8_t *tensor_arena;//[kTensorArenaSize]; // Maybe we should move this to external
 
-// bool tft_output(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap)
-// {
-//    // Stop further decoding as image is running off bottom of screen
-//   if ( y >= tft.height() ) return 0;
-
-//   // This function will clip the image block rendering automatically at the TFT boundaries
-//   tft.pushImage(x, y, w, h, bitmap);
-
-//   // This might work instead if you adapt the sketch to use the Adafruit_GFX library
-//   // tft.drawRGBBitmap(x, y, bitmap, w, h);
-
-//   // Return 1 to decode next block
-//   return 1;
-// }
 
 void init_camera(){
   camera_config_t config;
@@ -159,37 +144,8 @@ void AppSetup() {
   init_camera();
   // buffer = (uint16_t *) malloc(240*320*2);
 
-  // SPI.begin(TFT_SCLK,TFT_MISO,TFT_MOSI,TFT_CS);
-  // tft.begin();
-  // tft.setRotation(1);  // 0 & 2 Portrait. 1 & 3 landscape
-  // tft.fillScreen(TFT_BLACK);
-  // SPI.begin(TFT_SCLK,TFT_MISO,TFT_MOSI,TFT_CS);
-  // tft.begin();
-  // tft.setRotation(3);  // 0 & 2 Portrait. 1 & 3 landscape
-  // tft.fillScreen(TFT_BLACK);
-  
-
-//   // Set text colour to orange with black background
-//   tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-
-//   tft.setFreeFont(FF1);                 // Select the font
-//   tft.drawString(TEXT, 160, 120, GFXFF);// Print the string name of the font
-// //  tft.drawString(String(WiFi.localIP()).c_str(), 160, 180, GFXFF);
-//   tft.setCursor(50, 180, 2);
-  
-//   tft.setTextColor(TFT_GREEN, TFT_BLACK);    tft.setTextFont(4);
-
-//   // //The jpeg image can be scaled by a factor of 1, 2, 4, or 8
-//   TJpgDec.setJpgScale(1);
-
-//   // The byte order can be swapped (set true for TFT_eSPI)
-//   TJpgDec.setSwapBytes(true);
-
-  // The decoder must be given the exact name of the rendering function above
-  // TJpgDec.setCallback(tft_output);
   dstImage = (uint16_t *) malloc(DST_WIDTH * DST_HEIGHT*2);
-  //img192x192 = (uint16_t *) malloc(192*192*2);
-  // delay(200);
+
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
 
@@ -216,7 +172,7 @@ void AppSetup() {
   // needed by this graph.
   //
   
-  // tflite::AllOpsResolver resolver;
+  tflite::AllOpsResolver resolver;
   /*
   static tflite::MicroInterpreter static_interpreter(
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
@@ -232,13 +188,9 @@ void AppSetup() {
   micro_op_resolver.AddFullyConnected();
   micro_op_resolver.AddConv2D();
   micro_op_resolver.AddDepthwiseConv2D();
-  // micro_op_resolver.AddReshape();
   micro_op_resolver.AddSoftmax();
   micro_op_resolver.AddQuantize();
   micro_op_resolver.AddDequantize();
-  
-  
-  
 
   // Build an interpreter to run the model with.
   // NOLINTNEXTLINE(runtime-global-variables)
@@ -263,7 +215,6 @@ void AppSetup() {
 
 void AppLoop() {
   // Log("AppLoop");
-  // put your main code here, to run repeatedly:
   for (int i = 0; i<1; i++){
   fb = esp_camera_fb_get();
     if (!fb) {
@@ -276,40 +227,6 @@ void AppLoop() {
   delay(1);
   }
   tm_to_disp=millis();
-  // while(millis()-tm_to_disp<5000){ //display image for 3s to get hand in right position
-  // // digitalWrite(4, HIGH);
-
-  // Serial.println("in display");
-  // fb = esp_camera_fb_get();
-  //   if (!fb) {
-  //     Serial.println("Camera capture failed");
-  //   }
-  // uint16_t * tmp = (uint16_t *) fb->buf;
-
-  //   downsampleImage((uint16_t *) fb->buf, fb->width, fb->height);
-  //   bool jpeg_converted = frame2jpg(fb, 90, &_jpg_buf, &_jpg_buf_len);
-
-  //   for (int y = 0; y < DST_HEIGHT; y++) {
-  //     for (int x = 0; x < DST_WIDTH; x++) {
-  //       tmp[y*(fb->width) + x] = (uint16_t) dstImage[y*DST_WIDTH +x];
-
-  //     }
-  //   }
-    
-  //   // TJpgDec.drawJpg(0,0,(const uint8_t*) _jpg_buf, _jpg_buf_len);
-  //   upsample((uint16_t *) fb->buf);
-  //   tft_output(0, 0, 192, 192, (uint16_t *) img192x192);
-  //   // tft_output(0, 0, fb->width, fb->height, (uint16_t *) fb->buf);
-  //   // tft_output(50, 50, 96, 96, dstImage);
-  //   delay(15);
-  
-  //   // Serial.println((String(fb->len)).c_str());
-  //   // Serial.println((String(sizeof(fb->buf))).c_str());
-  //   // delay(20);
-
- 
-  //   delay(15);
-  // }
       
   if(fb){
     esp_camera_fb_return(fb);
@@ -349,11 +266,6 @@ void AppLoop() {
 
         // image_data[i * kNumCols + j] = grey_pixel;
 
-        // to display
-        // display_buf[2 * i * kNumCols * 2 + 2 * j] = pixel;
-        // display_buf[2 * i * kNumCols * 2 + 2 * j + 1] = pixel;
-        // display_buf[(2 * i + 1) * kNumCols * 2 + 2 * j] = pixel;
-        // display_buf[(2 * i + 1) * kNumCols * 2 + 2 * j + 1] = pixel;
       }
     }
 
@@ -364,7 +276,24 @@ void AppLoop() {
   }
   
   TfLiteTensor* output = interpreter->output(0);
+  TfLiteEvalTensor* output_eval_ptr = new TfLiteEvalTensor();// This is a fokn same as TfLiteTensor, just lighter, but it makes GetTensorData work
+  output_eval_ptr->data = output->data;
+  output_eval_ptr->dims = output->dims;
+  output_eval_ptr->type = output->type;
+  TfLiteType type = output->type;
+  Log("output type = " + String(type));
+  size_t bytes = output->bytes;
+  Log("output bytes = " + String(bytes));
+  TfLiteIntArray* dims = output->dims;
+  Log("output dims->size = " + String(dims->size));
 
+  uint8_t* outputData = tflite::micro::GetTensorData<uint8_t>(output_eval_ptr);
+  Log("tflite::micro::GetTensorData<uint8_t>(output)");
+  for (int i = 0; i < kCategoryCount; i++) {
+    LogInline(String((int)outputData[i])+" ");
+  }
+  LogInline("\n");
+  Log("end tflite::micro::GetTensorData<uint8_t>(output)");
 
   int8_t confidenceIndexes[kCategoryCount];
   int8_t confidenceValues[kCategoryCount];
@@ -390,45 +319,14 @@ void AppLoop() {
     }
   }
 
-  Log("Inference results: ");
+  String result="";
   // Print the data in the desired format
   for (int i = 0; i < kCategoryCount; i++) {
-    if (i > 0) LogInline("\t"); // Add a tab separator between label:value pairs (except for the first one)
-    LogInline(String(kCategoryLabels[i]));
-    LogInline(":");
-    LogInline(String(confidenceValues[i]));
+    if (i > 0) result += "\t"; // Add a tab separator between label:value pairs (except for the first one)
+    result+=String(kCategoryLabels[i]);
+    result+=":";
+    result+=String(confidenceValues[i]);
   }
-  LogInline("\n");
-  // int8_t person_score = output->data.uint8[kPersonIndex];
-  
-  // int8_t no_person_score = output->data.uint8[kNotAPersonIndex];
-  
-  // float person_score_f =
-  //     (person_score - output->params.zero_point) * output->params.scale;
-  // float no_person_score_f =
-  //     (no_person_score - output->params.zero_point) * output->params.scale;
+  Log("Inference results: "+result);
 
-  // Serial.print("person score: "); Serial.println(person_score_f);
-  // Serial.print("no person score: "); Serial.println(no_person_score_f);
-
-  // tft.setTextSize(4); 
-  // String detected= String(kCategoryLabels[idx]);
-  // String detected2 = String(kCategoryLabels[idx2]);
-  // String fps = "avg fps " + String(avg_fps);
-  // tft.drawString(detected, 192, 0);
-  // tft.drawString(detected2, 192, 110);
-  //fb_gfx_printf(fb, 40, 12, 0xffff, "avg fps:%3d", avg_fps);
-        //tft.fillColor(color_det);
-  // if (person_score_f>no_person_score_f){
-  //     tft.fillRect(0, 200, 40, 40,TFT_GREEN );
-  // } else {
-  //   tft.fillRect(0, 200, 40, 40,TFT_RED );
-  // }
-  
-    // esp_camera_fb_return(fb);
-    // fb = NULL;
-    // free(buffer);
-  // delay(2000);
-  // tft.fillScreen(TFT_BLUE);
-  // delay(10);
 }

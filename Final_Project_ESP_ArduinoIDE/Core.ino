@@ -1,6 +1,6 @@
 void CoreSetup() {
   Init();
-  Log(BUILD_TIME);
+  Log("Compilation time: "+BUILD_TIME);
   if (!initSuccess)
     OtaErrorHandlerSetup();
   else

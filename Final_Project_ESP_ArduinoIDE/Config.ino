@@ -6,7 +6,7 @@
 #define BOOT_FILE "/boot.txt"
 #define LOGS_FILE "/logs.txt"
 #define DEVICE_NAME_FILE "/deviceName.txt"
-#define BUILD_TIME String(BUILD_DAY)+" "+String(BUILD_MONTH)+" "+String(BUILD_YEAR)+" "+String(BUILD_HOUR)+":"+String(BUILD_MIN)+":"+String(BUILD_SEC)
+#define BUILD_TIME String(BUILD_DAY)+"."+String(BUILD_MONTH)+"."+String(BUILD_YEAR)+" "+String(BUILD_HOUR)+":"+String(BUILD_MIN)+":"+String(BUILD_SEC)
 
 bool initSuccess = false;
 
