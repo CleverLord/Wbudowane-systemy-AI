@@ -2,7 +2,6 @@
 //soft
 void OtaErrorHandlerSetup() {
   CreateAP();
-  isInSafeMode = true;
 }
 
 void OtaErrorHandlerLoop() {

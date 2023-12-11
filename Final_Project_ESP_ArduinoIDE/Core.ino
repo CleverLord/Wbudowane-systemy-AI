@@ -1,5 +1,6 @@
 void CoreSetup() {
   Init();
+  Log("Compilation time: "+BUILD_TIME);
   if (!initSuccess)
     OtaErrorHandlerSetup();
   else
@@ -18,7 +19,7 @@ void CoreLoop() {
     return;
   }
 
-  if (isInSafeMode) {
+  if (!initSuccess) {
     //Casual bad - Devs' code problem
     //Safe mode ( Access Point + Ota enabled only )
     OtaErrorHandlerLoop();
@@ -28,4 +29,6 @@ void CoreLoop() {
   //regular code
   LateInit();
   AppLoop();
+  UpdateTimeClient();
+  // ProcessFps();
 }

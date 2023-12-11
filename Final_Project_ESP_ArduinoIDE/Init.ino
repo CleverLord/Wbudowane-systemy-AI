@@ -1,5 +1,6 @@
 void Init() {
   InitGpio();
+  HappyBlink();
   if (!InitSpiffs()) return;
   Log("Device Powered, Spiffs working");  //This is the first place we can use this function
   InitWifi();
@@ -14,7 +15,9 @@ void Init() {
 
   initSuccess = true;
   Log("Device running!");
+  HappierBlink();
 }
+
 void LateInit() {
   if (bootFileDeleted) return;
   if (millis() > 10000) {
@@ -32,12 +35,38 @@ void InitGpio() {
   digitalWrite(FLASH_LED, LOW);
 }
 
+void HappyBlink(){
+  int totalT=150;
+  int onT=20;
+  int repeats=2;
+  
+  for(int i=0;i<repeats;i++){
+    RedLedOn();
+    delay(onT);
+    RedLedOff();
+    delay(totalT-onT);
+  }
+}
+
+void HappierBlink(){
+  int totalT=100;
+  int onT=20;
+  int repeats=3;
+  
+  for(int i=0;i<repeats;i++){
+    RedLedOn();
+    delay(onT);
+    RedLedOff();
+    delay(totalT-onT);
+  }
+}
+
+
 void InitOtaAndHttp() {
   SetupSafeHttpEndpoints();
   AsyncElegantOTA.begin(&server);  //Start ElegantOTA
-  Log("server.begin(); ");
   server.begin();  //Second error here                //this only launches socket for connections. Further functions can be added
-  Log("started, server.begin();");
+  Log("server.begin(); ");
 }
 
 void InitWifi() {

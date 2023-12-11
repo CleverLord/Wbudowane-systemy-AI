@@ -3,7 +3,11 @@
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
 #include <esp_task_wdt.h>
-#define WDT_TIMEOUT 3
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+#include <buildTime.h>
+
+#define WDT_TIMEOUT 20
 
 #define RED_LED 33
 #define FLASH_LED 4
@@ -14,6 +18,10 @@ void LateInit();
 
 String GetWifiMode();
 String GetWifiStatus();
+void RedLedOn();
+void RedLedOff();
+void FlashLedOn();
+void FlashLedOff();
 
 // WifiManager;
 void ConnectWiFi(String ssid, String pass);
