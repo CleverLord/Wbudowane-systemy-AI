@@ -1,4 +1,5 @@
 void Init() {
+  Log("Init");
   InitGpio();
   HappyBlink();
   if (!InitSpiffs()) return;
